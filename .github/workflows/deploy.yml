@@ -1,0 +1,77 @@
+name: Build and deploy to ECS Express
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Values come from: GitHub repo -> Settings -> Secrets and variables -> Actions -> Variables
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}             # ap-south-1
+  AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}     # 070638634270
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}     # hello-aws
+  ECS_SERVICE: ${{ vars.ECS_SERVICE }}           # hello-aws
+  ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}           # default
+
+permissions:
+  id-token: write   # lets GitHub sign in to AWS with OIDC (no stored access keys)
+  contents: read
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build
+        run: dotnet build HelloAws/HelloAws.csproj -c Release
+
+  deploy:
+    name: Push image and deploy
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set image tag (short commit id)
+        run: echo "IMAGE_TAG=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      - name: Sign in to AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/github-hello-aws-deploy
+          role-session-name: GitHubActionsHelloAws
+
+      - name: Log in to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        env:
+          IMAGE: ${{ steps.ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+        run: |
+          docker build --build-arg APP_VERSION=$IMAGE_TAG -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      # Settings below are repeated on purpose so an update never falls back to the
+      # larger defaults (1 vCPU / 2 GB, port 80, max 20 tasks).
+      - name: Deploy to ECS Express Mode
+        uses: aws-actions/amazon-ecs-deploy-express-service@v1
+        with:
+          service-name: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          image: ${{ steps.ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          execution-role-arn: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/ecsTaskExecutionRole
+          infrastructure-role-arn: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/ecsInfrastructureRoleForExpressServices
+          container-port: 8080
+          health-check-path: /health
+          cpu: '256'
+          memory: '512'
+          min-task-count: 1
+          max-task-count: 2

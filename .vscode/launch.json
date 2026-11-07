@@ -1,0 +1,33 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Container: Debug HelloAws (pipe)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "start-debug-container",
+      "program": "dotnet",
+      "args": ["/app/bin/Debug/net10.0/HelloAws.dll"],
+      "cwd": "/app",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_HTTP_PORTS": "8080"
+      },
+      "pipeTransport": {
+        "pipeProgram": "docker",
+        "pipeArgs": ["exec", "-i", "helloaws-dev"],
+        "debuggerPath": "/remote_debugger/vsdbg",
+        "pipeCwd": "${workspaceFolder}",
+        "quoteArgs": false
+      },
+      "sourceFileMap": { "/app": "${workspaceFolder}/HelloAws" },
+      "requireExactSource": false,
+      "justMyCode": true,
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "Now listening on:\\s+(https?)://",
+        "uriFormat": "%s://localhost:5080"
+      }
+    }
+  ]
+}

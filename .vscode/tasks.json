@@ -1,0 +1,75 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "dotnet-build",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["build", "${workspaceFolder}/HelloAws/HelloAws.csproj"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "docker build",
+      "type": "shell",
+      "command": "docker build -t hello-aws:local .",
+      "problemMatcher": []
+    },
+    {
+      "label": "docker run",
+      "type": "shell",
+      "command": "docker run --rm -p 5080:8080 hello-aws:local",
+      "problemMatcher": []
+    },
+    {
+      "label": "remove-old-container",
+      "type": "shell",
+      "command": "docker rm -f helloaws-dev; exit 0",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent"
+      }
+    },
+    {
+      "label": "build-debug-image",
+      "type": "docker-build",
+      "dependsOn": ["remove-old-container", "dotnet-build"],
+      "dependsOrder": "sequence",
+      "dockerBuild": {
+        "tag": "hello-aws:dev",
+        "dockerfile": "${workspaceFolder}/Dockerfile",
+        "context": "${workspaceFolder}",
+        "target": "debug",
+        "pull": true
+      },
+      "platform": "netCore",
+      "netCore": {
+        "appProject": "${workspaceFolder}/HelloAws/HelloAws.csproj"
+      }
+    },
+    {
+      "label": "start-debug-container",
+      "type": "docker-run",
+      "dependsOn": ["build-debug-image"],
+      "dockerRun": {
+        "image": "hello-aws:dev",
+        "ports": [
+          {
+            "containerPort": 8080,
+            "hostPort": 5080
+          }
+        ],
+        "env": {
+          "ASPNETCORE_ENVIRONMENT": "Development"
+        }
+      },
+      "netCore": {
+        "appProject": "${workspaceFolder}/HelloAws/HelloAws.csproj",
+        "enableDebugging": true
+      }
+    }
+  ]
+}
