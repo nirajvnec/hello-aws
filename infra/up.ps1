@@ -111,14 +111,29 @@ $container = @{ image = $image; containerPort = $ContainerPort }
 $scaling   = @{ minTaskCount = $MinTasks; maxTaskCount = $MaxTasks; autoScalingMetric = "AVERAGE_CPU"; autoScalingTargetValue = 60 }
 $status    = Try-Aws ecs describe-express-gateway-service --service-arn $ServiceArn --query "service.status.statusCode" --output text
 if ($status -and $status.Trim() -eq "ACTIVE") {
-    $update = @{ serviceArn = $ServiceArn; executionRoleArn = $ExecRoleArn; healthCheckPath = $HealthCheckPath
-                 cpu = $Cpu; memory = $Memory; primaryContainer = $container; scalingTarget = $scaling }
+    $update = @{
+        serviceArn       = $ServiceArn
+        executionRoleArn = $ExecRoleArn
+        healthCheckPath  = $HealthCheckPath
+        cpu              = $Cpu
+        memory           = $Memory
+        primaryContainer = $container
+        scalingTarget    = $scaling
+    }
     Run-Aws ecs update-express-gateway-service --cli-input-json (JsonFile $update) | Out-Null
     Ok "update started (rolling deployment, no downtime)"
 } else {
-    $create = @{ serviceName = $ServiceName; cluster = $Cluster; executionRoleArn = $ExecRoleArn
-                 infrastructureRoleArn = $InfraRoleArn; healthCheckPath = $HealthCheckPath
-                 cpu = $Cpu; memory = $Memory; primaryContainer = $container; scalingTarget = $scaling }
+    $create = @{
+        serviceName           = $ServiceName
+        cluster               = $Cluster
+        executionRoleArn      = $ExecRoleArn
+        infrastructureRoleArn = $InfraRoleArn
+        healthCheckPath       = $HealthCheckPath
+        cpu                   = $Cpu
+        memory                = $Memory
+        primaryContainer      = $container
+        scalingTarget         = $scaling
+    }
     Run-Aws ecs create-express-gateway-service --cli-input-json (JsonFile $create) | Out-Null
     Ok "create started (load balancer, certificate and networking are set up automatically)"
 }
