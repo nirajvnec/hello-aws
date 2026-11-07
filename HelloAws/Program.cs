@@ -24,7 +24,7 @@ app.MapGet("/", () =>
     // Block body with separate statements, so breakpoints can bind on these lines.
     var response = new
     {
-        message = "Hello from ASP.NET Core on AWS ECS V2!",
+        message = "Hello from ASP.NET Core on AWS ECS V3 (via pull request)!",
         version,
         machine = Environment.MachineName,
         utc = DateTime.UtcNow
