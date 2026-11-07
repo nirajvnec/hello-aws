@@ -73,3 +73,14 @@ when it's green, refresh the service URL and the `version` field shows the new c
 
 ## Clean up
 Delete the ECS Express service (removes load balancer and tasks), then the ECR repository.
+
+## Create or delete all AWS resources with one command
+
+Scripts in `infra/` (settings in `infra/config.ps1`). Run from the repo root, signed in with `aws login --profile hello-aws`, Docker Desktop running:
+
+```powershell
+pwsh -File .\infra\up.ps1     # ECR, IAM roles, GitHub OIDC role, build + push image, create/update the Express service, print URL
+pwsh -File .\infra\down.ps1   # delete the service (load balancer etc.), logs and ECR images. Add -All to also delete IAM roles
+```
+
+`up.ps1` is safe to re-run: existing resources are reused, and an existing service gets a rolling update.
